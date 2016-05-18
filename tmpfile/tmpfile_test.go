@@ -46,6 +46,7 @@ func TestTmpFile(t *testing.T) {
 
 	for i, tt := range testCases {
 		tmpf, err := New(tt.ctx)
+
 		if tt.wantErr {
 			if err == nil {
 				t.Errorf("#%d: got nil err, want non-nil err", i)
@@ -79,6 +80,21 @@ func TestTmpFile(t *testing.T) {
 			for j := 0; j < 4; j++ {
 				if err := tmpf.Done(); err != nil {
 					t.Fatalf("#%d, Done.Try #%d: done.Err=%v expected non-nil error", i, j, err)
+				}
+			}
+
+			if tt.ctx.CreateIsolatedDir {
+				// Ensure that deletions were performed properly when
+				dir := tmpf.Dir()
+				if dir == "" {
+					t.Fatalf("#%d: got=%q, want non empty dir", i, dir)
+				}
+				dirStatInfo, err := os.Stat(dir)
+				if dirStatInfo != nil {
+					t.Errorf("#%d: dirStatInfo=%v expected nil", i, dirStatInfo)
+				}
+				if !os.IsNotExist(err) {
+					t.Errorf("#%d: got err=%v, expected one of os.IsNotExist", i, err)
 				}
 			}
 		}

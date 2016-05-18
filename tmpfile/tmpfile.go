@@ -74,9 +74,11 @@ func New(ctx *Context) (*TmpFile, error) {
 	var abortFn func() error
 	ownCreatedDir := false
 	if ctx.CreateIsolatedDir {
-		dir = filepath.Join(os.Getenv("TMPDIR"), dir, uuid.UUID4().String())
-		abortFn = func() error { return os.RemoveAll(dir) }
-		ownCreatedDir = true
+		dirSuffix := dir
+		if dirSuffix == "" {
+			dirSuffix = uuid.UUID4().String()
+		}
+		dir = filepath.Join(os.Getenv("TMPDIR"), dirSuffix)
 	}
 
 	if _, err := os.Stat(dir); err != nil {
@@ -87,6 +89,8 @@ func New(ctx *Context) (*TmpFile, error) {
 			if err := os.MkdirAll(dir, 0755); err != nil {
 				return nil, err
 			}
+			abortFn = func() error { return os.RemoveAll(dir) }
+			ownCreatedDir = true
 		}
 	}
 
@@ -106,6 +110,7 @@ func New(ctx *Context) (*TmpFile, error) {
 	ttmpf.tmpf = tmpf
 	ttmpf.ownCreatedDir = ownCreatedDir
 	ttmpf.path = filepath.Join(dir, tmpf.Name())
+	ttmpf.dir = dir
 	return ttmpf, nil
 }
 
@@ -144,4 +149,8 @@ func (tf *TmpFile) Seek(offset int64, whence int) (ret int64, err error) {
 
 func (tf *TmpFile) Stat() (os.FileInfo, error) {
 	return tf.tmpf.Stat()
+}
+
+func (tf *TmpFile) Dir() string {
+	return tf.dir
 }
